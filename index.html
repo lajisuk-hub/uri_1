@@ -368,7 +368,7 @@ async function startAnalysis() {
     {"ok": true, "label": "항목명", "comment": "구체적 코멘트"}
   ],
   "supplements": [
-    {"label": "보완 항목명", "content": "AI가 직접 작성한 보완 내용 (실제 문장으로)"}
+    {"label": "보완 항목명", "original": "일지에서 해당 부분의 기존 작성 내용을 그대로 인용 (없으면 '해당 내용 없음')", "improved": "위 기존 내용을 보완하여 AI가 새로 작성한 내용 (실제 문장으로)"}
   ]
 }`;
 
@@ -420,11 +420,19 @@ function renderAnalysis(result) {
 
   const supArea = document.getElementById('supplementArea');
   if (result.supplements && result.supplements.length > 0) {
-    supArea.innerHTML = result.supplements.map(s => `
+   supArea.innerHTML = result.supplements.map(s => `
       <div class="supplement-box">
         <div class="supplement-label">💡 ${s.label}</div>
-        ${s.content}
+        <div style="margin-bottom:10px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">📌 기존 작성 내용</div>
+          <div style="font-size:13px; color:var(--text-muted); background:#f5f5f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${s.original || '해당 내용 없음'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:4px;">✏️ 이렇게 보완해 보세요</div>
+          <div style="font-size:13px; color:var(--text); background:#e8f4f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${s.improved || ''}</div>
+        </div>
       </div>`).join('');
+    state.supplementText = result.supplements.map(s => `[${s.label}]\n기존: ${s.original}\n보완: ${s.improved}`).join('\n\n');
     state.supplementText = result.supplements.map(s => `[${s.label}]\n${s.content}`).join('\n\n');
   } else {
     supArea.innerHTML = '<p style="font-size:14px; color:var(--success);">🎉 보완할 내용이 없어요. 훌륭한 일지입니다!</p>';
