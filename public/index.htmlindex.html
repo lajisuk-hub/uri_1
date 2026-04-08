@@ -386,7 +386,10 @@ async function startAnalysis() {
     {
       "label": "보완 항목명",
       "original": "일지에서 해당 부분의 기존 작성 내용을 그대로 인용",
-      "improved": "4단계 구조(①교사 의도→②영아 반응→③교사 확장 지원→④놀이 확장+배움)로 새로 작성한 내용"
+      "step1": {"keyword": "①교사 의도", "content": "교사가 왜 이 놀이를 제시했는지 1~2문장"},
+      "step2": {"keyword": "②영아 반응", "content": "영아들이 어떻게 반응했는지 1~2문장"},
+      "step3": {"keyword": "③교사 확장 지원", "content": "교사가 놀이 확장을 위해 한 지원 1~2문장"},
+      "step4": {"keyword": "④놀이 확장+배움", "content": "놀이가 어떻게 확장되고 무엇을 배웠는지 1~2문장"}
     }
   ]
 }`;
@@ -441,33 +444,45 @@ function renderAnalysis(result) {
   if (result.supplements && result.supplements.length > 0) {
     supArea.innerHTML = result.supplements.map(s => {
       const orig = s.original || s.content || '해당 내용 없음';
-      const impr = s.improved || s.content || '';
-      const hasComparison = s.original && s.improved;
-      if (hasComparison) {
+      const hasSteps = s.step1 && s.step2 && s.step3 && s.step4;
+      if (hasSteps) {
+        const steps = [s.step1, s.step2, s.step3, s.step4];
+        const colors = ['#4A7C6F', '#6B9E90', '#E8A87C', '#5A9E6E'];
+        const stepsHtml = steps.map((st, i) => `
+          <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;">
+            <div style="flex-shrink:0; background:${colors[i]}; color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px; white-space:nowrap; margin-top:2px;">${st.keyword}</div>
+            <div style="font-size:13px; color:var(--text); line-height:1.7;">${st.content}</div>
+          </div>`).join('<div style="margin-left:46px; margin-bottom:8px; color:var(--text-light); font-size:12px;">↓</div>');
         return `
       <div class="supplement-box">
         <div class="supplement-label">💡 ${s.label}</div>
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">📌 기존 작성 내용</div>
+          <div style="font-size:13px; color:var(--text-muted); background:#f5f5f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${orig}</div>
+        </div>
+        <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:10px;">✏️ 이렇게 보완해 보세요</div>
+        ${stepsHtml}
+      </div>`;
+      } else {
+        const impr = s.improved || s.content || '';
+        return `
+      <div class="supplement-box">
+        <div class="supplement-label">💡 ${s.label}</div>
+        <div style="margin-bottom:8px;">
           <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">📌 기존 작성 내용</div>
           <div style="font-size:13px; color:var(--text-muted); background:#f5f5f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${orig}</div>
         </div>
-        <div>
-          <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:4px;">✏️ 이렇게 보완해 보세요</div>
-          <div style="font-size:13px; color:var(--text); background:#e8f4f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${impr}</div>
-        </div>
-      </div>`;
-      } else {
-        return `
-      <div class="supplement-box">
-        <div class="supplement-label">💡 ${s.label}</div>
-        <div style="font-size:13px; color:var(--text); line-height:1.8;">${impr}</div>
+        <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:4px;">✏️ 이렇게 보완해 보세요</div>
+        <div style="font-size:13px; color:var(--text); background:#e8f4f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${impr}</div>
       </div>`;
       }
     }).join('');
     state.supplementText = result.supplements.map(s => {
       const orig = s.original || s.content || '';
-      const impr = s.improved || s.content || '';
-      return `[${s.label}]\n기존: ${orig}\n보완: ${impr}`;
+      if (s.step1) {
+        return `[${s.label}]\n기존: ${orig}\n${s.step1.keyword}: ${s.step1.content}\n${s.step2.keyword}: ${s.step2.content}\n${s.step3.keyword}: ${s.step3.content}\n${s.step4.keyword}: ${s.step4.content}`;
+      }
+      return `[${s.label}]\n기존: ${orig}\n보완: ${s.improved || s.content || ''}`;
     }).join('\n\n');
   } else {
     supArea.innerHTML = '<p style="font-size:14px; color:var(--success);">🎉 보완할 내용이 없어요. 훌륭한 일지입니다!</p>';
