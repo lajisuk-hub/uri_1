@@ -417,7 +417,7 @@ async function startAnalysis() {
     renderAnalysis(result);
   } catch (e) {
     console.error('분석 오류:', e.message, raw);
-    showToast('분석 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    showToast('오류가 발생했습니다. 새로고침(F5) 후 다시 시도해 주세요.');
     goBack();
   }
 }
@@ -638,6 +638,17 @@ function saveResult() {
   a.click();
   showToast('저장 완료!');
 }
+
+// ─── 세션 타임아웃 안내 ───
+let sessionTimer = null;
+function resetSessionTimer() {
+  if (sessionTimer) clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    showToast('⏰ 시간이 오래 지났어요. 오류가 나면 새로고침 후 다시 시작해 주세요!');
+  }, 2 * 60 * 1000;
+}
+resetSessionTimer();
+document.addEventListener('click', resetSessionTimer);
 
 function showToast(msg) {
   const t = document.getElementById('toast');
