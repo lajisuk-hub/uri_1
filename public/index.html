@@ -310,8 +310,7 @@ async function handleFile(input) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items.map(item => item.str).join(' ');
-      fullText += pageText + '
-';
+      fullText += pageText + '\n';
     }
     state.journalText = fullText;
     state.pdfBase64 = '';
