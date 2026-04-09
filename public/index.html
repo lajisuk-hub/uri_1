@@ -409,13 +409,14 @@ async function startAnalysis() {
   const userContent = `다음 보육일지를 분석해 주세요:\n\n${state.journalText}`;
 
   try {
-    const raw = await callClaude([{ role: 'user', content: userContent }], system, 1500);
+    const raw = await callClaude([{ role: 'user', content: userContent }], system, 2000);
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('파싱 실패');
     const result = JSON.parse(jsonMatch[0]);
     state.analysisResult = result;
     renderAnalysis(result);
   } catch (e) {
+    console.error('분석 오류:', e.message, raw);
     showToast('분석 중 오류가 발생했습니다. 다시 시도해 주세요.');
     goBack();
   }
