@@ -644,7 +644,7 @@ let sessionTimer = null;
 function resetSessionTimer() {
   if (sessionTimer) clearTimeout(sessionTimer);
   sessionTimer = setTimeout(() => {
-    showToast('⏰ 시간이 오래 지났어요. 오류가 나면 새로고침 후 다시 시작해 주세요!');
+    showToast('시간이 오래 지났어요. 오류가 나면 새로고침 후 다시 시작해 주세요!');
   }, 2 * 60 * 1000;
 }
 resetSessionTimer();
