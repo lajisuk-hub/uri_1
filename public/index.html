@@ -347,8 +347,8 @@ function setStep(n) {
 async function startAnalysis() {
   const text = document.getElementById('journalText').value.trim();
   if (state.inputMode === 'text' && !text) { showToast('보육일지 내용을 입력해 주세요'); return; }
-  if (state.inputMode === 'pdf' && !state.pdfBase64) { showToast('PDF 파일을 업로드해 주세요'); return; }
-  state.journalText = text;
+  if (state.inputMode === 'pdf' && !state.journalText) { showToast('PDF 파일을 업로드해 주세요'); return; }
+  if (state.inputMode === 'text') state.journalText = text;
 
   document.getElementById('sectionInput').classList.add('hidden');
   document.getElementById('sectionAnalysis').classList.remove('hidden');
