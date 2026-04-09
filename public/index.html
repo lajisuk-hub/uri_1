@@ -293,19 +293,32 @@ function switchTab(mode) {
   document.getElementById('tabPdf').classList.toggle('hidden', mode !== 'pdf');
 }
 
-// ─── PDF 처리 ───
-function handleFile(input) {
+// ─── PDF 처리 (브라우저에서 텍스트 추출) ───
+async function handleFile(input) {
   const file = input.files[0];
   if (!file) return;
   const status = document.getElementById('fileStatus');
   status.classList.remove('hidden');
-  status.textContent = `📄 ${file.name} (읽는 중...)`;
-  const reader = new FileReader();
-  reader.onload = e => {
-    state.pdfBase64 = e.target.result.split(',')[1];
-    status.textContent = `✅ ${file.name} 준비 완료`;
-  };
-  reader.readAsDataURL(file);
+  status.textContent = `📄 ${file.name} (텍스트 추출 중...)`;
+  try {
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      fullText += pageText + '
+';
+    }
+    state.journalText = fullText;
+    state.pdfBase64 = '';
+    status.textContent = `✅ ${file.name} 준비 완료 (${pdf.numPages}페이지)`;
+  } catch (e) {
+    status.textContent = `❌ 파일 읽기 실패: ${e.message}`;
+  }
 }
 
 const dropZone = document.getElementById('dropZone');
@@ -394,15 +407,7 @@ async function startAnalysis() {
   ]
 }`;
 
-  let userContent;
-  if (state.inputMode === 'pdf' && state.pdfBase64) {
-    userContent = [
-      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: state.pdfBase64 } },
-      { type: 'text', text: '위 보육일지를 분석해 주세요.' }
-    ];
-  } else {
-    userContent = `다음 보육일지를 분석해 주세요:\n\n${state.journalText}`;
-  }
+  const userContent = `다음 보육일지를 분석해 주세요:\n\n${state.journalText}`;
 
   try {
     const raw = await callClaude([{ role: 'user', content: userContent }], system, 1500);
@@ -641,5 +646,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </body>
 </html>
