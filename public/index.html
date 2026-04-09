@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>우리아이들 — 보육일지 AI 분석</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #4A7C6F;
+    --primary-light: #6B9E90;
+    --primary-dark: #2F5C51;
+    --accent: #E8A87C;
+    --bg: #F7F5F0;
+    --bg-card: #FFFFFF;
+    --text: #2C2C2C;
+    --text-muted: #7A7A7A;
+    --text-light: #A8A8A8;
+    --border: #E5E0D8;
+    --success: #5A9E6E;
+    --warning: #D4894A;
+    --danger: #C0524A;
+    --radius: 16px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.7; }
+
+  header {
+    background: var(--primary-dark);
+    padding: 1.25rem 2rem;
+    display: flex; align-items: center; gap: 1rem;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  header h1 { font-family: 'Noto Serif KR', serif; font-size: 1.1rem; font-weight: 600; color: #fff; }
+  header span { font-size: 0.75rem; color: rgba(255,255,255,0.55); font-weight: 300; }
+
+  main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .steps {
+    display: flex; align-items: center; margin-bottom: 2rem;
+    background: var(--bg-card); border-radius: var(--radius);
+    padding: 1rem 1.5rem; box-shadow: var(--shadow); overflow-x: auto; gap: 0;
+  }
+  .step { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--border); color: var(--text-light); transition: all 0.3s; }
+  .step-label { font-size: 12px; color: var(--text-light); white-space: nowrap; transition: all 0.3s; }
+  .step.active .step-num { background: var(--primary); color: #fff; }
+  .step.active .step-label { color: var(--primary); font-weight: 500; }
+  .step.done .step-num { background: var(--success); color: #fff; }
+  .step.done .step-label { color: var(--success); }
+  .step-line { flex: 1; height: 1px; background: var(--border); min-width: 16px; margin: 0 4px; }
+
+  .card { background: var(--bg-card); border-radius: var(--radius); padding: 1.75rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card-title { font-family: 'Noto Serif KR', serif; font-size: 1rem; font-weight: 600; color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { width: 28px; height: 28px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff; }
+
+  .input-tabs { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .tab-btn { padding: 6px 16px; border-radius: 99px; border: 1.5px solid var(--border); background: transparent; font-size: 13px; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+  .tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  textarea { width: 100%; min-height: 200px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.8; color: var(--text); resize: vertical; transition: border-color 0.2s; background: var(--bg); }
+  textarea:focus { outline: none; border-color: var(--primary); background: #fff; }
+  textarea::placeholder { color: var(--text-light); }
+
+  .upload-zone { border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 2.5rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg); }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); background: #f0f7f5; }
+  .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-zone p { font-size: 14px; color: var(--text-muted); }
+  .upload-zone span { font-size: 12px; color: var(--text-light); }
+  #fileInput { display: none; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 99px; border: none; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(74,124,111,0.3); }
+  .btn-primary:disabled { background: var(--border); color: var(--text-light); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #D4936A; transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
+  .btn-outline:hover { background: var(--primary); color: #fff; }
+  .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+  .analysis-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; margin-bottom: 1rem; }
+  .badge-good { background: #E8F5EB; color: var(--success); }
+  .badge-medium { background: #FEF3E8; color: var(--warning); }
+  .badge-poor { background: #FCECEA; color: var(--danger); }
+
+  .check-list { list-style: none; margin: 1rem 0; }
+  .check-list li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; line-height: 1.6; }
+  .check-list li:last-child { border-bottom: none; }
+  .check-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+
+  .supplement-box { background: #F0F7F5; border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 1rem 1.25rem; margin: 0.75rem 0; font-size: 14px; line-height: 1.8; color: var(--text); }
+  .supplement-label { font-size: 11px; font-weight: 700; color: var(--primary); letter-spacing: 0.5px; margin-bottom: 6px; }
+
+  .confirm-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+
+  .play-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 1rem 0; }
+  .play-card { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; transition: all 0.2s; }
+  .play-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+  .play-card .play-emoji { font-size: 1.5rem; margin-bottom: 6px; }
+  .play-card .play-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .play-card .play-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+  .loading { display: flex; flex-direction: column; align-items: center; padding: 2.5rem; gap: 1rem; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 14px; color: var(--text-muted); }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 1.5rem 0; color: var(--text-light); font-size: 12px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .age-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1rem; }
+  .age-btn { padding: 8px 18px; border-radius: 99px; border: 1.5px solid var(--border); background: transparent; font-size: 13px; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+  .age-btn:hover, .age-btn.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .flow-box { background: linear-gradient(135deg, #F0F7F5, #EAF3F0); border-radius: var(--radius-sm); padding: 1.25rem; font-size: 14px; line-height: 2; }
+
+  .hidden { display: none !important; }
+
+  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 13px; transition: transform 0.3s; z-index: 999; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 600px) { main { padding: 1rem 1rem 3rem; } .card { padding: 1.25rem; } header { padding: 1rem; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌱</div>
+  <div>
+    <h1>우리아이들 보육일지 AI</h1>
+    <span>영유아교육디자인연구소</span>
+  </div>
+</header>
+
+<main>
+  <div class="steps" id="stepBar">
+    <div class="step active" id="step1"><div class="step-num">1</div><div class="step-label">일지 입력</div></div>
+    <div class="step-line"></div>
+    <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">분석</div></div>
+    <div class="step-line"></div>
+    <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">보완 확인</div></div>
+    <div class="step-line"></div>
+    <div class="step" id="step4"><div class="step-num">4</div><div class="step-label">주간 흐름</div></div>
+    <div class="step-line"></div>
+    <div class="step" id="step5"><div class="step-num">5</div><div class="step-label">다음주 추천</div></div>
+  </div>
+
+  <!-- STEP 1: 입력 -->
+  <div id="sectionInput">
+    <div class="card">
+      <div class="card-title"><div class="icon">📝</div>보육일지를 입력해 주세요</div>
+      <div class="input-tabs">
+        <button class="tab-btn active" onclick="switchTab('text')">텍스트 붙여넣기</button>
+        <button class="tab-btn" onclick="switchTab('pdf')">PDF 업로드</button>
+      </div>
+      <div id="tabText">
+        <textarea id="journalText" placeholder="보육일지 내용을 여기에 붙여넣기 해주세요.&#10;날짜, 놀이관찰, 교사지원, 주간평가 등 전체 내용을 복사해서 붙여넣으시면 됩니다."></textarea>
+      </div>
+      <div id="tabPdf" class="hidden">
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon">📄</div>
+          <p>PDF 파일을 여기에 끌어다 놓거나 클릭하여 선택하세요</p>
+          <span>최대 10MB · PDF 파일만 가능</span>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf" onchange="handleFile(this)" style="display:none">
+        <div id="fileStatus" class="hidden" style="margin-top:8px; font-size:13px; color:var(--primary)"></div>
+      </div>
+      <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary" onclick="startAnalysis()">🔍 분석 시작</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: 분석 -->
+  <div id="sectionAnalysis" class="hidden">
+    <div class="card" id="loadingCard">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>보육일지를 분석하고 있어요...</p>
+      </div>
+    </div>
+    <div class="card hidden" id="analysisResult">
+      <div class="card-title"><div class="icon">📊</div>분석 결과</div>
+      <div id="badgeArea"></div>
+      <ul class="check-list" id="checkList"></ul>
+      <div class="divider">보완이 필요한 부분</div>
+      <div id="supplementArea"></div>
+      <div style="margin-top:1.25rem; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="goBack()">← 다시 입력</button>
+        <button class="btn btn-primary btn-sm" onclick="showConfirm()">보완 내용 확인하기 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: 확인 -->
+  <div id="sectionConfirm" class="hidden">
+    <div class="card">
+      <div class="card-title"><div class="icon">✅</div>보완 내용 확인</div>
+      <p style="font-size:14px; color:var(--text-muted); margin-bottom:1rem;">AI가 작성한 보완 내용이 실제 활동과 맞나요?</p>
+      <div id="confirmContent" class="supplement-box" style="margin-bottom:1rem;"></div>
+      <p style="font-size:14px; font-weight:500; margin-bottom:0.75rem;">추가로 넣고 싶은 내용이 있으신가요?</p>
+      <textarea id="teacherAdd" placeholder="추가하실 내용을 입력해 주세요. 없으면 비워두고 다음으로 진행하세요." style="min-height:100px;"></textarea>
+      <div class="confirm-btns">
+        <button class="btn btn-primary" onclick="generateWeekly()">✨ 맞아요, 주간 분석 해주세요</button>
+        <button class="btn btn-outline" onclick="goBack()">🔄 다시 입력할게요</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: 주간 분석 -->
+  <div id="sectionWeekly" class="hidden">
+    <div class="card" id="weeklyLoadingCard">
+      <div class="loading"><div class="spinner"></div><p>주간 놀이를 분석하고 있어요...</p></div>
+    </div>
+    <div class="card hidden" id="weeklyResult">
+      <div class="card-title"><div class="icon">📅</div>주간 놀이 분석</div>
+      <div id="weeklyContent"></div>
+      <div class="divider">이번 주 놀이 흐름</div>
+      <div id="flowContent" class="flow-box"></div>
+      <div style="margin-top:1.25rem; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="showAgeQuestion()">다음주 놀이 추천받기 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: 연령 & 추천 -->
+  <div id="sectionRecommend" class="hidden">
+    <div class="card">
+      <div class="card-title"><div class="icon">👶</div>영아 연령을 알려주세요</div>
+      <p style="font-size:14px; color:var(--text-muted); margin-bottom:0.5rem;">연령에 맞는 놀이를 추천해 드릴게요</p>
+      <div class="age-btns">
+        <button class="age-btn" onclick="selectAge(this,'만 0세 (0~12개월)')">만 0세 (0~12개월)</button>
+        <button class="age-btn" onclick="selectAge(this,'만 0세 (12~24개월)')">만 0세 (12~24개월)</button>
+        <button class="age-btn" onclick="selectAge(this,'만 1세')">만 1세</button>
+        <button class="age-btn" onclick="selectAge(this,'만 2세')">만 2세</button>
+        <button class="age-btn" onclick="selectAge(this,'만 3세')">만 3세</button>
+        <button class="age-btn" onclick="selectAge(this,'만 4세')">만 4세</button>
+        <button class="age-btn" onclick="selectAge(this,'만 5세')">만 5세</button>
+      </div>
+    </div>
+    <div class="card hidden" id="recommendResult">
+      <div class="card-title"><div class="icon">🎯</div>다음주 추천 놀이</div>
+      <div id="playCards" class="play-cards"></div>
+      <div class="divider">다음주 놀이 주제 추천</div>
+      <div id="themeRecommend" class="supplement-box"></div>
+      <div style="margin-top:1.5rem; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" onclick="restart()">🔄 새 일지 분석하기</button>
+        <button class="btn btn-accent btn-sm" onclick="saveResult()">💾 결과 저장하기</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  inputMode: 'text',
+  journalText: '',
+  pdfBase64: '',
+  analysisResult: null,
+  supplementText: '',
+  weeklyResult: null,
+  selectedAge: ''
+};
+
+// ─── API 호출 (서버사이드) ───
+async function callClaude(messages, system, max_tokens = 1500) {
+  const res = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, system, max_tokens })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '서버 오류');
+  return data.text;
+}
+
+// ─── 탭 전환 ───
+function switchTab(mode) {
+  state.inputMode = mode;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && mode === 'text') || (i === 1 && mode === 'pdf'));
+  });
+  document.getElementById('tabText').classList.toggle('hidden', mode !== 'text');
+  document.getElementById('tabPdf').classList.toggle('hidden', mode !== 'pdf');
+}
+
+// ─── PDF 처리 (브라우저에서 텍스트 추출) ───
+async function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('fileStatus');
+  status.classList.remove('hidden');
+  status.textContent = `📄 ${file.name} (텍스트 추출 중...)`;
+  try {
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+    state.journalText = fullText;
+    state.pdfBase64 = '';
+    status.textContent = `✅ ${file.name} 준비 완료 (${pdf.numPages}페이지)`;
+  } catch (e) {
+    status.textContent = `❌ 파일 읽기 실패: ${e.message}`;
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    const dt = new DataTransfer(); dt.items.add(file);
+    document.getElementById('fileInput').files = dt.files;
+    handleFile(document.getElementById('fileInput'));
+  }
+});
+
+// ─── 스텝 ───
+function setStep(n) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('step' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+}
+
+// ─── STEP 1→2 분석 ───
+async function startAnalysis() {
+  const text = document.getElementById('journalText').value.trim();
+  if (state.inputMode === 'text' && !text) { showToast('보육일지 내용을 입력해 주세요'); return; }
+  if (state.inputMode === 'pdf' && !state.journalText) { showToast('PDF 파일을 업로드해 주세요'); return; }
+  if (state.inputMode === 'text') state.journalText = text;
+
+  document.getElementById('sectionInput').classList.add('hidden');
+  document.getElementById('sectionAnalysis').classList.remove('hidden');
+  document.getElementById('loadingCard').classList.remove('hidden');
+  document.getElementById('analysisResult').classList.add('hidden');
+  setStep(2);
+
+  const system = `당신은 영유아 보육일지 전문 분석가입니다. 한국어로 답변합니다.
+
+[작성 어투 규칙 - 반드시 지켜주세요]
+- 어린이집 보육일지 특유의 어투를 사용합니다
+- "~하였다", "~보였다", "~나타났다", "~하는 모습을 보였다" 형태로 씁니다
+- "~하겠습니다", "~할 것입니다", "~됩니다" 같은 격식체는 절대 사용하지 않습니다
+- 어려운 학술 용어 대신 교사들이 일지에서 자연스럽게 쓰는 표현을 사용합니다
+
+[잘된 보육일지 기준]
+1. 하루를 대표하는 의미 있는 놀이 선정 (단순 5~10분짜리 활동이 아닌 하루의 핵심 놀이)
+2. 교사가 왜 이 놀이를 제시했는지 이유와 의도가 명확히 서술됨
+3. 영아의 반응과 놀이 흐름이 구체적으로 서술됨
+4. 교사가 놀이 확장을 위해 어떤 지원을 했는지 서술됨
+5. 그 결과 놀이가 어떻게 확장되었는지 서술됨
+6. 배움읽기: 이 놀이에서 영아가 무엇을 경험하고 배웠는지 서술됨
+
+[보완 내용 작성 4단계 구조 - 반드시 이 구조로 작성]
+① 교사가 왜 이 놀이를 제시했는지 (놀이 시작 이유와 교사의 환경 지원)
+② 영아들이 어떻게 반응하고 놀이했는지 (구체적 행동과 감정 반응)
+③ 교사가 놀이 확장을 위해 어떤 지원을 했는지 (교사의 의도적 개입)
+④ 그 결과 놀이가 어떻게 확장되었는지 + 배움읽기
+
+[절대 하면 안 되는 것]
+- 단순히 영아 행동만 묘사하는 것 (기존 내용과 차이가 없어짐)
+- 짧은 활동 하나만 보완하는 것 (하루 전체 맥락에서 의미 있는 놀이를 선정해야 함)
+- "~하며 즐거워하였다"로만 끝내는 것 (왜, 어떻게, 그래서 어떻게 확장되었는지가 있어야 함)
+
+[보완 예시]
+기존: "풍선을 만져보고 잡아당기고 교사가 풍선을 쳐서 영아도 따라 쳐보기도 하였음"
+보완: "영아들이 풍선에 관심을 보여 교사는 교실에 풍선을 제시하였다. 영아들은 풍선에 다가와 만져보거나 잡아당기며 탐색하였다. 교사는 영아들의 놀이가 확장될 수 있도록 풍선을 높이 튕겨주었고, 영아들은 풍선이 움직이는 모습을 바라보다 손으로 직접 쳐보는 시도를 하였다. 풍선이 흔들릴 때마다 까르르 웃으며 반복해서 치는 모습을 보여 교사와 함께하는 놀이에서 즐거움을 경험하였다."
+
+반드시 아래 JSON 형식으로만 출력하세요:
+{
+  "grade": "잘됨|중간|부족",
+  "gradeReason": "한 문장 판정 이유",
+  "checks": [
+    {"ok": true, "label": "항목명", "comment": "구체적 코멘트"}
+  ],
+  "supplements": [
+    {
+      "label": "보완 항목명",
+      "original": "일지에서 해당 부분의 기존 작성 내용을 그대로 인용",
+      "step1": {"keyword": "①교사 의도", "content": "교사가 왜 이 놀이를 제시했는지 1~2문장"},
+      "step2": {"keyword": "②영아 반응", "content": "영아들이 어떻게 반응했는지 1~2문장"},
+      "step3": {"keyword": "③교사 확장 지원", "content": "교사가 놀이 확장을 위해 한 지원 1~2문장"},
+      "step4": {"keyword": "④놀이 확장+배움", "content": "놀이가 어떻게 확장되고 무엇을 배웠는지 1~2문장"}
+    }
+  ]
+}`;
+
+  const userContent = `다음 보육일지를 분석해 주세요:\n\n${state.journalText}`;
+
+  try {
+    const raw = await callClaude([{ role: 'user', content: userContent }], system, 2000);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('파싱 실패');
+    const result = JSON.parse(jsonMatch[0]);
+    state.analysisResult = result;
+    renderAnalysis(result);
+  } catch (e) {
+    console.error('분석 오류:', e.message, raw);
+    showToast('오류가 발생했습니다. 새로고침(F5) 후 다시 시도해 주세요.');
+    goBack();
+  }
+}
+
+function renderAnalysis(result) {
+  document.getElementById('loadingCard').classList.add('hidden');
+  document.getElementById('analysisResult').classList.remove('hidden');
+
+  const badgeMap = {
+    '잘됨': ['badge-good', '✅ 잘된 일지입니다'],
+    '중간': ['badge-medium', '🔶 보완이 필요한 일지입니다'],
+    '부족': ['badge-poor', '❌ 전면 보완이 필요한 일지입니다']
+  };
+  const [cls, label] = badgeMap[result.grade] || ['badge-medium', '🔶 분석 완료'];
+  document.getElementById('badgeArea').innerHTML = `
+    <div class="analysis-badge ${cls}">${label}</div>
+    <p style="font-size:14px; color:var(--text-muted); margin-bottom:0.5rem;">${result.gradeReason}</p>`;
+
+  document.getElementById('checkList').innerHTML = result.checks.map(c => `
+    <li>
+      <span class="check-icon">${c.ok ? '✅' : '❌'}</span>
+      <div>
+        <strong style="font-size:13px;">${c.label}</strong><br>
+        <span style="font-size:13px; color:var(--text-muted);">${c.comment}</span>
+      </div>
+    </li>`).join('');
+
+  const supArea = document.getElementById('supplementArea');
+  if (result.supplements && result.supplements.length > 0) {
+    supArea.innerHTML = result.supplements.map(s => {
+      const orig = s.original || s.content || '해당 내용 없음';
+      const hasSteps = s.step1 && s.step2 && s.step3 && s.step4;
+      if (hasSteps) {
+        const steps = [s.step1, s.step2, s.step3, s.step4];
+        const colors = ['#4A7C6F', '#6B9E90', '#E8A87C', '#5A9E6E'];
+        const stepsHtml = steps.map((st, i) => `
+          <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;">
+            <div style="flex-shrink:0; background:${colors[i]}; color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px; white-space:nowrap; margin-top:2px;">${st.keyword}</div>
+            <div style="font-size:13px; color:var(--text); line-height:1.7;">${st.content}</div>
+          </div>`).join('<div style="margin-left:46px; margin-bottom:8px; color:var(--text-light); font-size:12px;">↓</div>');
+        return `
+      <div class="supplement-box">
+        <div class="supplement-label">💡 ${s.label}</div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">📌 기존 작성 내용</div>
+          <div style="font-size:13px; color:var(--text-muted); background:#f5f5f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${orig}</div>
+        </div>
+        <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:10px;">✏️ 이렇게 보완해 보세요</div>
+        ${stepsHtml}
+      </div>`;
+      } else {
+        const impr = s.improved || s.content || '';
+        return `
+      <div class="supplement-box">
+        <div class="supplement-label">💡 ${s.label}</div>
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">📌 기존 작성 내용</div>
+          <div style="font-size:13px; color:var(--text-muted); background:#f5f5f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${orig}</div>
+        </div>
+        <div style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:4px;">✏️ 이렇게 보완해 보세요</div>
+        <div style="font-size:13px; color:var(--text); background:#e8f4f0; border-radius:6px; padding:8px 12px; line-height:1.8;">${impr}</div>
+      </div>`;
+      }
+    }).join('');
+    state.supplementText = result.supplements.map(s => {
+      const orig = s.original || s.content || '';
+      if (s.step1) {
+        return `[${s.label}]\n기존: ${orig}\n${s.step1.keyword}: ${s.step1.content}\n${s.step2.keyword}: ${s.step2.content}\n${s.step3.keyword}: ${s.step3.content}\n${s.step4.keyword}: ${s.step4.content}`;
+      }
+      return `[${s.label}]\n기존: ${orig}\n보완: ${s.improved || s.content || ''}`;
+    }).join('\n\n');
+  } else {
+    supArea.innerHTML = '<p style="font-size:14px; color:var(--success);">🎉 보완할 내용이 없어요. 훌륭한 일지입니다!</p>';
+    state.supplementText = '';
+  }
+}
+
+// ─── STEP 3: 확인 ───
+function showConfirm() {
+  document.getElementById('sectionAnalysis').classList.add('hidden');
+  document.getElementById('sectionConfirm').classList.remove('hidden');
+  document.getElementById('confirmContent').innerHTML = state.supplementText || '보완할 내용이 없습니다. 바로 주간 분석으로 진행해 주세요.';
+  setStep(3);
+}
+
+// ─── STEP 4: 주간 분석 ───
+async function generateWeekly() {
+  const teacherAdd = document.getElementById('teacherAdd').value.trim();
+  document.getElementById('sectionConfirm').classList.add('hidden');
+  document.getElementById('sectionWeekly').classList.remove('hidden');
+  document.getElementById('weeklyLoadingCard').classList.remove('hidden');
+  document.getElementById('weeklyResult').classList.add('hidden');
+  setStep(4);
+
+  const system = `당신은 영유아 보육일지 전문 분석가입니다. 한국어로 답변합니다.
+반드시 아래 JSON 형식으로만 출력하세요:
+{
+  "weeklyAnalysis": "이번 주 놀이 전체 분석 (3~4문장, 교사 지원의 의도와 영아 성장 중심으로)",
+  "playFlow": "월→화→수→목→금 놀이 흐름을 화살표(→)로 연결한 한 줄 요약",
+  "highlights": ["이번 주 가장 의미 있었던 놀이 순간 2~3가지"]
+}`;
+
+  const userMsg = `보육일지:\n${state.journalText}\n\n보완된 내용:\n${state.supplementText}\n\n교사 추가 내용:\n${teacherAdd}`;
+
+  try {
+    const raw = await callClaude([{ role: 'user', content: userMsg }], system, 1000);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const result = JSON.parse(jsonMatch[0]);
+    state.weeklyResult = result;
+    renderWeekly(result);
+  } catch (e) {
+    document.getElementById('weeklyLoadingCard').classList.add('hidden');
+    document.getElementById('weeklyResult').classList.remove('hidden');
+    document.getElementById('weeklyContent').innerHTML = '<p style="color:var(--danger)">주간 분석 중 오류가 발생했습니다.</p>';
+    document.getElementById('flowContent').innerHTML = '';
+  }
+}
+
+function renderWeekly(result) {
+  document.getElementById('weeklyLoadingCard').classList.add('hidden');
+  document.getElementById('weeklyResult').classList.remove('hidden');
+
+  let html = `<p style="font-size:14px; line-height:1.9; margin-bottom:1rem;">${result.weeklyAnalysis}</p>`;
+  if (result.highlights?.length) {
+    html += `<div style="margin-top:0.5rem;">
+      <p style="font-size:13px; font-weight:500; color:var(--primary); margin-bottom:6px;">✨ 이번 주 하이라이트</p>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:6px;">
+        ${result.highlights.map(h => `<li style="font-size:13px; color:var(--text-muted); padding-left:16px; position:relative;"><span style="position:absolute;left:0">•</span>${h}</li>`).join('')}
+      </ul></div>`;
+  }
+  document.getElementById('weeklyContent').innerHTML = html;
+  document.getElementById('flowContent').innerHTML = `<p style="font-size:14px; color:var(--primary-dark); font-weight:500; line-height:2;">${result.playFlow}</p>`;
+}
+
+// ─── STEP 5: 연령 & 추천 ───
+function showAgeQuestion() {
+  document.getElementById('sectionWeekly').classList.add('hidden');
+  document.getElementById('sectionRecommend').classList.remove('hidden');
+  setStep(5);
+}
+
+function selectAge(btn, age) {
+  document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.selectedAge = age;
+  loadRecommendations(age);
+}
+
+async function loadRecommendations(age) {
+  document.getElementById('recommendResult').classList.remove('hidden');
+  document.getElementById('playCards').innerHTML = `<div style="grid-column:1/-1"><div class="loading"><div class="spinner"></div><p>맞춤 놀이를 찾고 있어요...</p></div></div>`;
+  document.getElementById('themeRecommend').textContent = '';
+
+  const system = `당신은 영유아 보육 전문가입니다. 한국어로만 답변하며 반드시 JSON으로만 출력합니다:
+{
+  "plays": [
+    {"emoji": "이모지", "name": "놀이 이름", "desc": "준비물과 방법을 1~2문장으로 (준비 간단한 것만)", "category": "감각|신체|언어|사회|탐색"}
+  ],
+  "theme": "다음주 추천 놀이 주제명",
+  "themeReason": "추천 이유 1~2문장"
+}
+plays는 반드시 4개, 준비가 간단한 것만 추천합니다.`;
+
+  const weekFlow = state.weeklyResult?.playFlow || '';
+  const userMsg = `연령: ${age}\n이번 주 놀이 흐름: ${weekFlow}\n\n이번 주 흐름을 이어받아 다음 주에 할 수 있는 준비 간단한 놀이 4가지와 주제를 추천해 주세요.`;
+
+  try {
+    const raw = await callClaude([{ role: 'user', content: userMsg }], system, 1000);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const result = JSON.parse(jsonMatch[0]);
+    renderRecommend(result);
+  } catch (e) {
+    document.getElementById('playCards').innerHTML = '<p style="font-size:14px; color:var(--danger);">추천을 불러오는 중 오류가 발생했습니다.</p>';
+  }
+}
+
+function renderRecommend(result) {
+  document.getElementById('playCards').innerHTML = result.plays.map(p => `
+    <div class="play-card">
+      <div class="play-emoji">${p.emoji}</div>
+      <div class="play-name">${p.name}</div>
+      <div class="play-desc">${p.desc}</div>
+      <div style="margin-top:8px;"><span style="font-size:11px; background:var(--border); color:var(--text-muted); padding:2px 8px; border-radius:99px;">${p.category}</span></div>
+    </div>`).join('');
+  document.getElementById('themeRecommend').innerHTML = `
+    <strong style="color:var(--primary-dark);">📌 ${result.theme}</strong><br>
+    <span style="font-size:13px; color:var(--text-muted);">${result.themeReason}</span>`;
+}
+
+// ─── 유틸 ───
+function goBack() {
+  ['sectionAnalysis','sectionConfirm','sectionWeekly','sectionRecommend'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('sectionInput').classList.remove('hidden');
+  setStep(1);
+}
+
+function restart() {
+  document.getElementById('journalText').value = '';
+  document.getElementById('teacherAdd').value = '';
+  Object.assign(state, { inputMode:'text', journalText:'', pdfBase64:'', analysisResult:null, supplementText:'', weeklyResult:null, selectedAge:'' });
+  goBack();
+}
+
+function saveResult() {
+  const lines = [
+    '=== 우리아이들 보육일지 AI 분석 결과 ===',
+    `분석 등급: ${state.analysisResult?.grade || '-'}`,
+    `판정 이유: ${state.analysisResult?.gradeReason || '-'}`,
+    '', '[보완 내용]', state.supplementText || '없음',
+    '', '[주간 분석]', state.weeklyResult?.weeklyAnalysis || '-',
+    '', '[이번 주 놀이 흐름]', state.weeklyResult?.playFlow || '-',
+    '', `[분석 일시] ${new Date().toLocaleString('ko-KR')}`
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `보육일지_분석_${new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','')}.txt`;
+  a.click();
+  showToast('저장 완료!');
+}
+
+// ─── 세션 타임아웃 안내 ───
+let sessionTimer = null;
+function resetSessionTimer() {
+  if (sessionTimer) clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    showToast('⏰ 시간이 오래 지났어요. 오류가 나면 새로고침 후 다시 시작해 주세요!');
+  }, 2 * 60 * 1000;
+}
+resetSessionTimer();
+document.addEventListener('mousedown', resetSessionTimer);
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</body>
+</html>
